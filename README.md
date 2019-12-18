@@ -1,8 +1,9 @@
 ## Import AWS Config Findings into AWS Security Hub
 
-This repository contains two folders.
-Template: This folder contains cloudformation template to deploy the solution for integrating AWS Config with AWS Security Hub
-Code: This folder contains the python lambda code file that integrates AWS Config with AWS Security Hub
+This repository contains the following.
+
+- **Template** contains the cloudformation template to deploy the solution for integrating AWS Config with AWS Security Hub
+- **Code** contains the python lambda code file that integrates AWS Config with AWS Security Hub
 
 ## License Summary
 
