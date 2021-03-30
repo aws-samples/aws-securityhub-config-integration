@@ -79,3 +79,4 @@ Resources:
         Fn::GetAtt:
           - 'ConfigSecHubCWRule'
           - 'Arn'
+          
