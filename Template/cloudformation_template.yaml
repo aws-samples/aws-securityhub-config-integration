@@ -45,7 +45,7 @@ Resources:
         Fn::GetAtt:
           - LambdaServiceRole
           - Arn
-      Runtime: python3.7
+      Runtime: python3.8
       Timeout: 300  
   ConfigSecHubCWRule:
     Type: AWS::Events::Rule
@@ -58,9 +58,12 @@ Resources:
         detail-type:
           - Config Rules Compliance Change
         detail:
+          configRuleName:
+            - anything-but:
+                prefix: securityhub-
           messageType:
             - ComplianceChangeNotification
-      State: 'ENABLED'
+      State: ENABLED
       Targets:
         - 
           Arn: 

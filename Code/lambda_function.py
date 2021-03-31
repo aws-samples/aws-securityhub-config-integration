@@ -97,8 +97,7 @@ def map_config_findings_to_sh(event, old_recorded_time):
 def parse_message(event):
     """Initialize event logic."""
     event_details = event['detail']
-    if (event_details['messageType'] == 'ComplianceChangeNotification' and
-            "securityhub.amazonaws.com" not in event_details['configRuleARN']):
+    if (event_details['messageType'] == 'ComplianceChangeNotification':
         if 'oldEvaluationResult' not in event_details:
             old_recorded_time = (event_details['newEvaluationResult']['resultRecordedTime'])
         else:
