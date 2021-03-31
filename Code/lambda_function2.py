@@ -1,6 +1,5 @@
 """Script to integrate Config with Security Hub."""
 import boto3
-import hashlib
 
 SECURITYHUB = boto3.client('securityhub')
 CONFIG = boto3.client('config')
@@ -34,30 +33,25 @@ def get_compliance_and_severity(new_status):
 def map_config_findings_to_sh(event, old_recorded_time):
     """Create custom finding."""
     new_findings = []
-    event_details = event['detail']
-    new_status = event_details['newEvaluationResult']['complianceType']
-    config_rule_name = event_details['configRuleName']
+    new_status = event['detail']['newEvaluationResult']['complianceType']
+    config_rule_name = event['detail']['configRuleName']
     compliance_status = get_compliance_and_severity(new_status)
     description = get_description_of_rule(config_rule_name)
-    remediation_url = (f"https://console.aws.amazon.com/config/home?region={event_details['awsRegion']}#/rules/details?configRuleName={config_rule_name}")
-    finding_hash = hashlib.sha256(f"{event_details['configRuleARN']}-{event_details['resourceId']}".encode()).hexdigest()
-    finding_id = (f"arn:aws:securityhub:{event_details['awsRegion']}:{event_details['awsAccountId']}:config/rules/{config_rule_name}/finding/{finding_hash}")
+    remediation_url = (f"https://console.aws.amazon.com/config/home?region={event['detail']['awsRegion']}#/rules/rule-details/{config_rule_name}")
     new_findings.append({
         "SchemaVersion": "2018-10-08",
-        "Id": finding_id,
-        "ProductArn": (f"arn:aws:securityhub:{event_details['awsRegion']}:"
-                       f"{event_details['awsAccountId']}:"
-                       f"product/{event_details['awsAccountId']}/default"),
-        "GeneratorId": event_details['configRuleARN'],
-        "AwsAccountId": event_details['awsAccountId'],
-        'ProductFields': {
-                'ProviderName': 'AWS Config'
-            },
+        "Id": event['id'],
+        "ProductArn": (f"arn:aws:securityhub:{event['detail']['awsRegion']}:"
+                       f"{event['detail']['awsAccountId']}:"
+                       f"product/{event['detail']['awsAccountId']}/default"),
+        "GeneratorId": event['detail']['configRuleARN'],
+        "AwsAccountId": event['detail']['awsAccountId'],
         "Types": [
             "Software and Configuration Checks/AWS Config Analysis"
         ],
         "CreatedAt": old_recorded_time,
-        "UpdatedAt": (event_details['newEvaluationResult']['resultRecordedTime']),
+        "UpdatedAt": (event['detail']
+                      ['newEvaluationResult']['resultRecordedTime']),
         "Severity": {
             "Product": compliance_status[1],
             "Normalized": compliance_status[2],
@@ -73,10 +67,10 @@ def map_config_findings_to_sh(event, old_recorded_time):
         },
         'Resources': [
             {
-                'Id': event_details['resourceId'],
-                'Type': event_details['resourceType'],
+                'Id': event['detail']['resourceId'],
+                'Type': event['detail']['resourceType'].split(":")[-1],
                 'Partition': "aws",
-                'Region': event_details['awsRegion']
+                'Region': event['detail']['awsRegion']
             }
         ],
         'Compliance': {'Status': compliance_status[0]}
@@ -96,13 +90,15 @@ def map_config_findings_to_sh(event, old_recorded_time):
 
 def parse_message(event):
     """Initialize event logic."""
-    event_details = event['detail']
-    if (event_details['messageType'] == 'ComplianceChangeNotification' and
-            "securityhub.amazonaws.com" not in event_details['configRuleARN']):
-        if 'oldEvaluationResult' not in event_details:
-            old_recorded_time = (event_details['newEvaluationResult']['resultRecordedTime'])
+    details = event['detail']
+    if (details['messageType'] == 'ComplianceChangeNotification' and
+            "securityhub.amazonaws.com" not in details['configRuleARN']):
+        if 'oldEvaluationResult' not in event['detail']:
+            old_recorded_time = (event['detail']
+                                 ['newEvaluationResult']['resultRecordedTime'])
         else:
-            old_recorded_time = (event_details['oldEvaluationResult']['resultRecordedTime'])
+            old_recorded_time = (event['detail']
+                                 ['oldEvaluationResult']['resultRecordedTime'])
         map_config_findings_to_sh(event, old_recorded_time)
     else:
         print("Other Notification")
@@ -111,4 +107,5 @@ def parse_message(event):
 def lambda_handler(event, context):
     """Begin Lambda execution."""
     print("Event Before Parsing: ", event)
+    print(lambda_context)
     parse_message(event)
