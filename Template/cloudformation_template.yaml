@@ -1,5 +1,14 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: This CloudFormation template will automate the importing of aws config findings into aws security hub
+Parameters:
+  LambdaSourceBucket:
+    Description: S3 Bucket of the Lambda code
+    Default: bucket-with-lambda-code
+    Type: String
+  LambdaSourceKey:
+    Description: Lambda file name in the S3 Bucket
+    Default: config-cwe-sh.zip
+    Type: String
 Resources:
   LambdaServiceRole:
     Type: 'AWS::IAM::Role'
@@ -37,8 +46,8 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        S3Bucket: 'config-securityhub-blog'
-        S3Key: 'config-cwe-sh.zip'
+        S3Bucket: !Ref LambdaSourceBucket 
+        S3Key: !Ref LambdaSourceKey        
       FunctionName : 'Config-SecHub-Lambda'
       Handler: 'lambda_function.lambda_handler'
       Role:
