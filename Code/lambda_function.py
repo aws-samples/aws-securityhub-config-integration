@@ -28,6 +28,8 @@ def get_compliance_and_severity(new_status):
     status = ['FAILED', 3.0, 30]
     if new_status == 'COMPLIANT':
         status = ['PASSED', 0, 0]
+    elif new_status == 'NOT_APPLICABLE':
+        status = ['NOT_AVAILABLE', 0, 0]
     return status
 
 
