@@ -2,6 +2,7 @@
 import logging
 import boto3
 import hashlib
+import time
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -61,24 +62,32 @@ def batch_import_findings(new_findings):
 
 def batch_update_findings(finding_id, updated_status, event_details):
     try:
-        response = SECURITYHUB.batch_update_findings(
-            FindingIdentifiers=[
-                {
-                    'Id': finding_id,
-                    'ProductArn': (f"arn:aws:securityhub:{event_details['awsRegion']}:"
-                                f"{event_details['awsAccountId']}:"
-                                f"product/{event_details['awsAccountId']}/default")
+        i = 0
+        while i < 3:
+            i += 1
+            time.sleep(1) #some wait time is recommended since previous call to BatchUpdateFindings is handled asynchronuously
+            response = SECURITYHUB.batch_update_findings(
+                FindingIdentifiers=[
+                    {
+                        'Id': finding_id,
+                        'ProductArn': (f"arn:aws:securityhub:{event_details['awsRegion']}:"
+                                    f"{event_details['awsAccountId']}:"
+                                    f"product/{event_details['awsAccountId']}/default")
+                    },
+                ],
+                Workflow={
+                    'Status': updated_status
                 },
-            ],
-            Workflow={
-                'Status': updated_status
-            },
-        )
-        if response['ProcessedFindings']:
-            logger.info(f"BatchUpdateFindings id='{finding_id}' workflow_status='{updated_status}' response='{response}'")
-        else:
-            logger.error(f"Failed to update finding worflow status: {response}" )
-
+            )
+            if response['ProcessedFindings']:
+                logger.info(f"BatchUpdateFindings id='{finding_id}' workflow_status='{updated_status}' response='{response}'")
+                break
+            else:
+                if i == 2:
+                    logger.error(f"Failed (final tentative) to update finding worflow status: {response}" )
+                else:
+                    logger.error(f"Failed to update (try number='{i}') finding worflow status: '{response}', retrying..." )
+                    
         return response
     except Exception as error:
         logger.error(f"Exception: {error}")
