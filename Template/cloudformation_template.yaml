@@ -30,6 +30,8 @@ Resources:
               - Effect: Allow
                 Action:
                   - 'securityhub:BatchImportFindings'
+                  - 'securityhub:BatchUpdateFindings'
+                  - 'securityhub:GetFindings'
                 Resource:
                   - '*'
               - Effect: Allow
