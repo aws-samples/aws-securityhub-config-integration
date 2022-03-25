@@ -9,6 +9,7 @@ logger.setLevel(logging.INFO)
 
 SECURITYHUB = boto3.client('securityhub')
 CONFIG = boto3.client('config')
+MAX_RETRIES = 3
 
 
 def get_description_of_rule(config_rule_name):
@@ -62,10 +63,8 @@ def batch_import_findings(new_findings):
 
 def batch_update_findings(finding_id, updated_status, event_details):
     try:
-        i = 0
-        while i < 3:
-            i += 1
-            time.sleep(1) #some wait time is recommended since previous call to BatchUpdateFindings is handled asynchronuously
+        for i in range(MAX_RETRIES):
+
             response = SECURITYHUB.batch_update_findings(
                 FindingIdentifiers=[
                     {
@@ -79,15 +78,15 @@ def batch_update_findings(finding_id, updated_status, event_details):
                     'Status': updated_status
                 },
             )
-            if response['ProcessedFindings']:
+
+            #Retry if UnprocessedFindings exist
+            if response['UnprocessedFindings']:
+                logger.error(f"Failed to update (try number='{i}'/{MAX_RETRIES-1}) finding worflow status: '{response}'" )
+                time.sleep(1)
+            else:
                 logger.info(f"BatchUpdateFindings id='{finding_id}' workflow_status='{updated_status}' response='{response}'")
                 break
-            else:
-                if i == 2:
-                    logger.error(f"Failed (final tentative) to update finding worflow status: {response}" )
-                else:
-                    logger.error(f"Failed to update (try number='{i}') finding worflow status: '{response}', retrying..." )
-                    
+
         return response
     except Exception as error:
         logger.error(f"Exception: {error}")
